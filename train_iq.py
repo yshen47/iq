@@ -84,15 +84,13 @@ def evaluate(vqg, data_loader, criterion, l2_criterion, args):
     if args.eval_steps is not None:
         total_steps = min(len(data_loader), args.eval_steps)
     start_time = time.time()
-    for iterations, (images, questions, answers,
-            categories, qindices) in enumerate(data_loader):
+    for iterations, (images, questions, answers, qindices) in enumerate(data_loader):
 
         # Set mini-batch dataset
         if torch.cuda.is_available():
             images = images.cuda()
             questions = questions.cuda()
             answers = answers.cuda()
-            categories = categories.cuda()
             qindices = qindices.cuda()
         alengths = process_lengths(answers)
 
@@ -130,16 +128,16 @@ def evaluate(vqg, data_loader, criterion, l2_criterion, args):
         kl_loss = gaussian_KL_loss(mus, logvars)
         total_kl += kl_loss.item()
 
-        # Category.
-        if not args.no_category_space:
-            category_features = vqg.encode_categories(categories)
-            t_mus, t_logvars = vqg.encode_into_t(
-                    image_features, category_features)
-            t_kl = gaussian_KL_loss(t_mus, t_logvars)
-            total_t_kl_loss += t_kl.item()
-            z_t_kl = compute_two_gaussian_loss(
-                    mus, logvars, t_mus, t_logvars)
-            total_z_t_kl += z_t_kl.item()
+        # # Category.
+        # if not args.no_category_space:
+        #     category_features = vqg.encode_categories(categories)
+        #     t_mus, t_logvars = vqg.encode_into_t(
+        #             image_features, category_features)
+        #     t_kl = gaussian_KL_loss(t_mus, t_logvars)
+        #     total_t_kl_loss += t_kl.item()
+        #     z_t_kl = compute_two_gaussian_loss(
+        #             mus, logvars, t_mus, t_logvars)
+        #     total_z_t_kl += z_t_kl.item()
 
         # Reconstruction.
         if not args.no_image_recon or not args.no_answer_recon:
@@ -213,7 +211,7 @@ def sample_for_each_category(vqg, image, args):
     return outputs
 
 
-def compare_outputs(images, questions, answers, categories,
+def compare_outputs(images, questions, answers,
                     alengths, vqg, vocab, logging,
                     args, num_show=5):
     """Sanity check generated output as we train.
@@ -237,11 +235,11 @@ def compare_outputs(images, questions, answers, categories,
         logging.info("         ")
         i = random.randint(0, images.size(0) - 1)  # Inclusive.
 
-        # Sample some types.
-        if not args.no_category_space:
-            category_outputs = vqg.predict_from_category(images, categories)
-            category_question = vocab.tokens_to_words(category_outputs[i])
-            logging.info('Typed question: %s' % category_question)
+        # # Sample some types.
+        # if not args.no_category_space:
+        #     category_outputs = vqg.predict_from_category(images, categories)
+        #     category_question = vocab.tokens_to_words(category_outputs[i])
+        #     logging.info('Typed question: %s' % category_question)
 
         # Log the outputs.
         output = vocab.tokens_to_words(outputs[i])

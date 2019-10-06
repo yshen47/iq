@@ -96,10 +96,10 @@ def save_dataset(image_dir, questions, annotations, vocab, output,
             continue
         if image_id not in done_img2idx:
             try:
-                path = "COCO_train2014_%d.jpg" % (image_id)
+                path = "COCO_val2014_%d.jpg" % (image_id)
                 image = Image.open(os.path.join(image_dir, path)).convert('RGB')
             except IOError:
-                path = "COCO_train2014_%012d.jpg" % (image_id)
+                path = "COCO_val2014_%012d.jpg" % (image_id)
                 image = Image.open(os.path.join(image_dir, path)).convert('RGB')
             image = transform(image)
             d_images[i_index, :, :, :] = np.array(image)
@@ -122,21 +122,21 @@ def save_dataset(image_dir, questions, annotations, vocab, output,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image-dir', type=str, default='data/vqa/train2014/',
+    parser.add_argument('--image-dir', type=str, default='data/vqa/val2014/',
                         help='directory for resized images')
     parser.add_argument('--vocab-path', type=str,
                         default='data/processed/vocab_vae.json',
                         help='Path for saving vocabulary wrapper.')
     parser.add_argument('--questions', type=str,
                         default='data/vqa/'
-                        'v2_OpenEnded_mscoco_train2014_questions.json',
+                        'v2_OpenEnded_mscoco_val2014_questions.json',
                         help='Path for train annotation file.')
     parser.add_argument('--annotations', type=str,
                         default='data/vqa/'
-                        'v2_OpenEnded_mscoco_train2014_annotations.json',
+                        'v2_OpenEnded_mscoco_val2014_annotations.json',
                         help='Path for train annotation file.')
     parser.add_argument('--output', type=str,
-                        default='data/processed/vae_dataset.hdf5',
+                        default='data/processed/vae_val_dataset.hdf5',
                         help='directory for resized images.')
     parser.add_argument('--im_size', type=int, default=224,
                         help='Size of images.')
