@@ -120,8 +120,8 @@ if __name__ == '__main__':
                         default='data/processed/vocab_vae.json',
                         help='Path for saving vocabulary wrapper.')
     parser.add_argument('--questions', type=str,
-                        default='data/vqa/v2_OpenEnded_mscoco_'
-                        'train2014_questions.json',
+                        default='data/vqa/'
+                        'v2_OpenEnded_mscoco_train2014_questions.json',
                         help='Path for train questions file.')
     parser.add_argument('--answer-types', type=str,
                         default='data/vqa/iq_dataset.json',

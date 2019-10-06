@@ -16,7 +16,7 @@ import torch.nn as nn
 from models import IQ
 from utils import Vocabulary
 from utils import get_glove_embedding
-from utils import get_loader
+from utils import get_vae_loader
 from utils import load_vocab
 from utils import process_lengths
 from utils import gaussian_KL_loss
@@ -214,7 +214,7 @@ def sample_for_each_category(vqg, image, args):
 
 
 def compare_outputs(images, questions, answers, categories,
-                    alengths, vqg, vocab, logging, cat2name,
+                    alengths, vqg, vocab, logging,
                     args, num_show=5):
     """Sanity check generated output as we train.
 
@@ -227,7 +227,6 @@ def compare_outputs(images, questions, answers, categories,
         vqg: A question generation instance.
         vocab: An instance of Vocabulary.
         logging: logging to use to report results.
-        cat2name: Mapping from category index to answer type name.
     """
     vqg.eval()
 
@@ -243,19 +242,14 @@ def compare_outputs(images, questions, answers, categories,
             category_outputs = vqg.predict_from_category(images, categories)
             category_question = vocab.tokens_to_words(category_outputs[i])
             logging.info('Typed question: %s' % category_question)
-            category_checks = sample_for_each_category(vqg, images[i], args)
-            category_checks = [cat2name[idx] + ': ' + vocab.tokens_to_words(category_checks[j])
-                           for idx, j in enumerate(range(category_checks.size(0)))]
-            logging.info('category checks: ' + ', '.join(category_checks))
 
         # Log the outputs.
         output = vocab.tokens_to_words(outputs[i])
         question = vocab.tokens_to_words(questions[i])
         answer = vocab.tokens_to_words(answers[i])
         logging.info('Sampled question : %s\n'
-                     'Target  question (%s): %s -> %s'
-                     % (output, cat2name[categories[i].item()],
-                        question, answer))
+                     'Target  question : %s -> %s'
+                     % (output, question, answer))
         logging.info("         ")
 
 
@@ -308,29 +302,16 @@ def train(args):
     # Load vocabulary wrapper.
     vocab = load_vocab(args.vocab_path)
 
-    # Load the category types.
-    cat2name = json.load(open(args.cat2name))
-
     # Build data loader
     logging.info("Building data loader...")
-    train_weights = json.load(open(args.train_dataset_weights))
-    train_weights = torch.DoubleTensor(train_weights)
-    train_sampler = torch.utils.data.sampler.WeightedRandomSampler(
-            train_weights, len(train_weights))
-    val_weights = json.load(open(args.val_dataset_weights))
-    val_weights = torch.DoubleTensor(val_weights)
-    val_sampler = torch.utils.data.sampler.WeightedRandomSampler(
-            val_weights, len(val_weights))
     data_loader = get_vae_loader(args.dataset, transform,
                                  args.batch_size, shuffle=False,
                                  num_workers=args.num_workers,
-                                 max_examples=args.max_examples,
-                                 sampler=train_sampler)
+                                 max_examples=args.max_examples)
     val_data_loader = get_vae_loader(args.val_dataset, transform,
                                      args.batch_size, shuffle=False,
                                      num_workers=args.num_workers,
-                                     max_examples=args.max_examples,
-                                     sampler=val_sampler)
+                                     max_examples=args.max_examples)
     logging.info("Done")
 
     vqg = create_model(args, vocab)
@@ -377,7 +358,7 @@ def train(args):
     t_kl = 0.0
     for epoch in range(args.num_epochs):
         for i, (images, questions, answers,
-                categories, qindices) in enumerate(data_loader):
+                qindices) in enumerate(data_loader):
             n_steps += 1
 
             # Set mini-batch dataset.
@@ -385,9 +366,8 @@ def train(args):
                 images = images.cuda()
                 questions = questions.cuda()
                 answers = answers.cuda()
-                categories = categories.cuda()
                 qindices = qindices.cuda()
-            alengths = process_lengths(answers)
+            alengths = (answers)
 
             # Eval now.
             if (args.eval_every_n_steps is not None and
@@ -395,8 +375,8 @@ def train(args):
                     n_steps % args.eval_every_n_steps == 0):
                 run_eval(vqg, val_data_loader, criterion, l2_criterion,
                          args, epoch, scheduler, info_scheduler)
-                compare_outputs(images, questions, answers, categories,
-                                alengths, vqg, vocab, logging, cat2name, args)
+                compare_outputs(images, questions, answers,
+                                alengths, vqg, vocab, logging, args)
 
             # Forward.
             vqg.train()
@@ -561,7 +541,7 @@ if __name__ == '__main__':
                         default='data/processed/vocab_vae.json',
                         help='Path for vocabulary wrapper.')
     parser.add_argument('--dataset', type=str,
-                        default='data/processed/vae_train_dataset.hdf5',
+                        default='data/processed/vae_dataset.hdf5',
                         help='Path for train annotation json file.')
     parser.add_argument('--val-dataset', type=str,
                         default='data/processed/vae_val_dataset.hdf5',
@@ -572,9 +552,6 @@ if __name__ == '__main__':
     parser.add_argument('--val-dataset-weights', type=str,
                         default='data/processed/vae_val_dataset_weights.json',
                         help='Location of sampling weights for training set.')
-    parser.add_argument('--cat2name', type=str,
-                        default='data/processed/cat2name.json',
-                        help='Location of mapping from category to type name.')
     parser.add_argument('--load-model', type=str, default=None,
                         help='Location of where the model weights are.')
 

@@ -90,7 +90,6 @@ class IQ(nn.Module):
                                   rnn_cell=rnn_cell,
                                   input_dropout_p=input_dropout_p,
                                   dropout_p=dropout_p,
-                                  use_attention=use_attention,
                                   embedding=embedding)
 
         # Setup encodering to z space.
@@ -241,21 +240,21 @@ class IQ(nn.Module):
         logvars = self.logvar_answer_encoder(attended_hiddens)
         return mus, logvars
 
-    def encode_into_t(self, image_features, category_features):
-        """Encodes the attended features into t space.
-
-        Args:
-            image_features: Batch of image features.
-            category_features: Batch of answer features.
-
-        Returns:
-            mus and logvars of the batch.
-        """
-        together = torch.cat((image_features, category_features), dim=1)
-        attended_hiddens = self.category_attention(together)
-        mus = self.mu_category_encoder(attended_hiddens)
-        logvars = self.logvar_category_encoder(attended_hiddens)
-        return mus, logvars
+    # def encode_into_t(self, image_features, category_features):
+    #     """Encodes the attended features into t space.
+    #
+    #     Args:
+    #         image_features: Batch of image features.
+    #         category_features: Batch of answer features.
+    #
+    #     Returns:
+    #         mus and logvars of the batch.
+    #     """
+    #     together = torch.cat((image_features, category_features), dim=1)
+    #     attended_hiddens = self.category_attention(together)
+    #     mus = self.mu_category_encoder(attended_hiddens)
+    #     logvars = self.logvar_category_encoder(attended_hiddens)
+    #     return mus, logvars
 
     def decode_questions(self, image_features, zs,
                          questions=None, teacher_forcing_ratio=0,

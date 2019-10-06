@@ -35,7 +35,6 @@ class IQDataset(data.Dataset):
             annos = h5py.File(self.dataset, 'r')
             self.questions = annos['questions']
             self.answers = annos['answers']
-            self.answer_types = annos['answer_types']
             self.image_indices = annos['image_indices']
             self.images = annos['images']
 
@@ -43,7 +42,6 @@ class IQDataset(data.Dataset):
             index = self.indices[index]
         question = self.questions[index]
         answer = self.answers[index]
-        answer_type = self.answer_types[index]
         image_index = self.image_indices[index]
         image = self.images[image_index]
 
@@ -53,7 +51,7 @@ class IQDataset(data.Dataset):
         qlength = question.size(0) - question.eq(0).sum(0).squeeze()
         if self.transform is not None:
             image = self.transform(image)
-        return (image, question, answer, answer_type,
+        return (image, question, answer,
                 qlength.item(), alength.item())
 
     def __len__(self):
@@ -76,7 +74,6 @@ def collate_fn(data):
             - image: torch tensor of shape (3, 256, 256).
             - question: torch tensor of shape (?); variable length.
             - answer: torch tensor of shape (?); variable length.
-            - answer_type: Int for category label
             - qlength: Int for question length.
             - alength: Int for answer length.
 
@@ -88,18 +85,17 @@ def collate_fn(data):
         qindices: torch tensor of shape(batch_size,).
     """
     # Sort a data list by caption length (descending order).
-    data.sort(key=lambda x: x[5], reverse=True)
-    images, questions, answers, answer_types, qlengths, _ = zip(*data)
+    data.sort(key=lambda x: x[4], reverse=True)
+    images, questions, answers, qlengths, _ = zip(*data)
     images = torch.stack(images, 0)
     questions = torch.stack(questions, 0).long()
     answers = torch.stack(answers, 0).long()
-    answer_types = torch.Tensor(answer_types).long()
     qindices = np.flip(np.argsort(qlengths), axis=0).copy()
     qindices = torch.Tensor(qindices).long()
-    return images, questions, answers, answer_types, qindices
+    return images, questions, answers, qindices
 
 
-def get_loader(dataset, transform, batch_size, sampler=None,
+def get_vae_loader(dataset, transform, batch_size,
                    shuffle=True, num_workers=1, max_examples=None,
                    indices=None):
     """Returns torch.utils.data.DataLoader for custom dataset.
@@ -108,7 +104,6 @@ def get_loader(dataset, transform, batch_size, sampler=None,
         dataset: Location of annotations hdf5 file.
         transform: Transformations that should be applied to the images.
         batch_size: How many data points per batch.
-        sampler: Instance of WeightedRandomSampler.
         shuffle: Boolean that decides if the data should be returned in a
             random order.
         num_workers: Number of threads to use.
@@ -124,7 +119,6 @@ def get_loader(dataset, transform, batch_size, sampler=None,
     data_loader = torch.utils.data.DataLoader(dataset=iq,
                                               batch_size=batch_size,
                                               shuffle=shuffle,
-                                              sampler=sampler,
                                               num_workers=num_workers,
                                               collate_fn=collate_fn)
     return data_loader
