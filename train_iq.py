@@ -367,7 +367,7 @@ def train(args):
                 questions = questions.cuda()
                 answers = answers.cuda()
                 qindices = qindices.cuda()
-            alengths = (answers)
+            alengths = process_lengths(answers)
 
             # Eval now.
             if (args.eval_every_n_steps is not None and
@@ -420,18 +420,18 @@ def train(args):
             total_loss += args.lambda_z * kl_loss
             kl_loss = kl_loss.item()
 
-            # Category regularization.
-            if not args.no_category_space:
-                category_features = vqg.encode_categories(categories)
-                t_mus, t_logvars = vqg.encode_into_t(
-                        image_features, category_features)
-                t_kl = gaussian_KL_loss(t_mus, t_logvars)
-                total_loss += args.lambda_t * t_kl
-                t_kl = t_kl.item()
-                z_t_kl = compute_two_gaussian_loss(
-                        mus, logvars, t_mus, t_logvars)
-                total_loss += args.lambda_z_t * z_t_kl
-                z_t_kl = z_t_kl.item()
+            # # Category regularization.
+            # if not args.no_category_space:
+            #     category_features = vqg.encode_categories(categories)
+            #     t_mus, t_logvars = vqg.encode_into_t(
+            #             image_features, category_features)
+            #     t_kl = gaussian_KL_loss(t_mus, t_logvars)
+            #     total_loss += args.lambda_t * t_kl
+            #     t_kl = t_kl.item()
+            #     z_t_kl = compute_two_gaussian_loss(
+            #             mus, logvars, t_mus, t_logvars)
+            #     total_loss += args.lambda_z_t * z_t_kl
+            #     z_t_kl = z_t_kl.item()
 
             # Generator Backprop.
             total_loss.backward()
